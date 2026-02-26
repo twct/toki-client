@@ -28,6 +28,7 @@ CPMAddPackage(
         "SDL_STATIC ON"
 )
 
+add_subdirectory(core)
 add_subdirectory(toolkit)
 
 add_executable(${PROJECT_NAME}
@@ -35,10 +36,10 @@ add_executable(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    SDL3::SDL3
     PkgConfig::MPV
     PkgConfig::SKIA
     Vulkan::Vulkan
+    toolkit
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
@@ -69,3 +70,20 @@ target_link_libraries(imgui-example
 )
 
 target_compile_features(imgui-example PRIVATE cxx_std_23)
+
+# Vulkan Example
+
+add_executable(vulkan-example
+    src/vulkan-example.cpp
+)
+
+target_link_libraries(vulkan-example
+    SDL3::SDL3
+    PkgConfig::MPV
+    PkgConfig::SKIA
+    Vulkan::Vulkan
+    core
+    toolkit
+)
+
+target_compile_features(vulkan-example PRIVATE cxx_std_23)
