@@ -6,6 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/get-cpm.cmake)
 
 find_package(PkgConfig REQUIRED)
+find_package(Vulkan REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 pkg_check_modules(GLEW REQUIRED IMPORTED_TARGET glew)
 pkg_check_modules(SKIA REQUIRED IMPORTED_TARGET skia)
@@ -27,6 +28,24 @@ CPMAddPackage(
         "SDL_STATIC ON"
 )
 
+add_subdirectory(toolkit)
+
+add_executable(${PROJECT_NAME}
+    src/main.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}
+    SDL3::SDL3
+    PkgConfig::MPV
+    PkgConfig::SKIA
+    Vulkan::Vulkan
+)
+
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SKIA_INCLUDE_DIRS})
+
+# IMGUI Example
+
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
@@ -37,23 +56,6 @@ CPMAddPackage(
 if(imgui_ADDED)
     add_subdirectory(cmake/imgui)
 endif()
-
-add_executable(${PROJECT_NAME}
-    src/main.cpp
-)
-
-target_link_libraries(${PROJECT_NAME}
-    SDL3::SDL3
-    PkgConfig::MPV
-    PkgConfig::GLEW
-    PkgConfig::SKIA
-    imgui
-)
-
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
-target_include_directories(${PROJECT_NAME} PRIVATE ${SKIA_INCLUDE_DIRS})
-
-# IMGUI Example
 
 add_executable(imgui-example
     src/example.cpp
