@@ -282,13 +282,6 @@ int main(int argc, char** argv) {
     }
     SDL_Log("Skia GrDirectContext created OK, backend=%d", gr_context->backend());
     SDL_Log("Swapchain format: %d", vk.swapchain_format);
-    SDL_Log("maxSurfaceSampleCount BGRA=%d RGBA=%d",
-        gr_context->maxSurfaceSampleCountForColorType(kBGRA_8888_SkColorType),
-        gr_context->maxSurfaceSampleCountForColorType(kRGBA_8888_SkColorType));
-    SDL_Log("colorTypeSupportedAsSurface BGRA=%d RGBA=%d SRGBA=%d",
-        gr_context->colorTypeSupportedAsSurface(kBGRA_8888_SkColorType),
-        gr_context->colorTypeSupportedAsSurface(kRGBA_8888_SkColorType),
-        gr_context->colorTypeSupportedAsSurface(kSRGBA_8888_SkColorType));
 
     // Load a system font
     auto font_mgr = SkFontMgr_New_Custom_Directory("/usr/share/fonts/TTF/");
@@ -359,77 +352,31 @@ int main(int argc, char** argv) {
             break;
         }
 
-        SDL_Log("Wrapping: w=%d h=%d format=%d image=%p gr_context=%p",
-            vk.width, vk.height, vk.swapchain_format,
-            (void*)(uintptr_t)vk.swapchain_images[image_index],
-            gr_context.get());
+        GrVkImageInfo image_info = {};
+        image_info.fImage = vk.swapchain_images[image_index];
+        image_info.fImageTiling = VK_IMAGE_TILING_OPTIMAL;
+        image_info.fImageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        image_info.fFormat = vk.swapchain_format;
+        image_info.fImageUsageFlags = vk.swapchain_usage;
+        image_info.fSampleCount = 1;
+        image_info.fLevelCount = 1;
+        image_info.fCurrentQueueFamily = vk.queue_family;
+        image_info.fSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        auto try_wrap = [&](VkImageLayout layout, const char* layout_label,
-                            SkColorType color_type, sk_sp<SkColorSpace> color_space, const char* label) {
-            GrVkImageInfo image_info = {};
-            image_info.fImage = vk.swapchain_images[image_index];
-            image_info.fImageTiling = VK_IMAGE_TILING_OPTIMAL;
-            image_info.fImageLayout = layout;
-            image_info.fFormat = vk.swapchain_format;
-            image_info.fImageUsageFlags = vk.swapchain_usage;
-            image_info.fSampleCount = 1;
-            image_info.fLevelCount = 1;
-            image_info.fCurrentQueueFamily = vk.queue_family;
-            image_info.fSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-            auto backend_rt = GrBackendRenderTargets::MakeVk(
-                static_cast<int>(vk.width),
-                static_cast<int>(vk.height),
-                image_info
-            );
-            SDL_Log("backend_rt[%s] valid=%d", layout_label, backend_rt.isValid());
-
-            auto wrapped = SkSurfaces::WrapBackendRenderTarget(
-                gr_context.get(),
-                backend_rt,
-                kTopLeft_GrSurfaceOrigin,
-                color_type,
-                std::move(color_space),
-                nullptr
-            );
-            SDL_Log("Wrap attempt '%s@%s': %s", label, layout_label, wrapped ? "ok" : "null");
-            return wrapped;
-        };
-
-        auto surface = try_wrap(
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, "present",
-            sk_color_type, SkColorSpace::MakeSRGB(), "selected+srgb"
+        auto backend_rt = GrBackendRenderTargets::MakeVk(
+            static_cast<int>(vk.width),
+            static_cast<int>(vk.height),
+            image_info
         );
-        if (!surface)
-            surface = try_wrap(
-                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, "present",
-                sk_color_type, nullptr, "selected+no-colorspace"
-            );
-        if (!surface)
-            surface = try_wrap(
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, "color-attachment",
-                sk_color_type, nullptr, "selected+no-colorspace"
-            );
-        if (!surface)
-            surface = try_wrap(
-                VK_IMAGE_LAYOUT_GENERAL, "general",
-                sk_color_type, nullptr, "selected+no-colorspace"
-            );
-        if (!surface)
-            surface = try_wrap(
-                VK_IMAGE_LAYOUT_UNDEFINED, "undefined",
-                sk_color_type, nullptr, "selected+no-colorspace"
-            );
-        if (!surface && sk_color_type != kBGRA_8888_SkColorType)
-            surface = try_wrap(
-                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, "present",
-                kBGRA_8888_SkColorType, nullptr, "bgra+no-colorspace"
-            );
-        if (!surface && sk_color_type != kRGBA_8888_SkColorType)
-            surface = try_wrap(
-                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, "present",
-                kRGBA_8888_SkColorType, nullptr, "rgba+no-colorspace"
-            );
+
+        auto surface = SkSurfaces::WrapBackendRenderTarget(
+            gr_context.get(),
+            backend_rt,
+            kTopLeft_GrSurfaceOrigin,
+            sk_color_type,
+            SkColorSpace::MakeSRGB(),
+            nullptr
+        );
 
         if (!surface) {
             SDL_Log("Failed to wrap swapchain image as Skia surface");
