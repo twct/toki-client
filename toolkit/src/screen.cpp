@@ -4,6 +4,20 @@
 
 namespace toolkit {
 
+void Screen::update(const UiInputState& input) {
+    update_node(m_root_node, input);
+}
+
+void Screen::update_node(UiNode& node, const UiInputState& input) {
+    if (!node.is_visible()) return;
+
+    node.update(input);
+
+    for (auto& child : node.m_nodes) {
+        update_node(*child, input);
+    }
+}
+
 void Screen::paint_node(UiNode& node) {
     if (!node.is_visible()) return;
 

@@ -272,6 +272,41 @@ Size UiNode::computed_size() const {
     };
 }
 
+static bool is_point_inside(
+    const Point& point,
+    const Point& position,
+    const Size& size
+);
+
+void UiNode::update(const UiInputState& input) {
+    auto pos = computed_position();
+    auto size = computed_size();
+    bool inside = is_point_inside(input.mouse_position, pos, size);
+
+    if (inside && !m_hovered) {
+        m_hovered = true;
+        trigger(UiMouseEnterEvent {*this, input.mouse_position});
+    } else if (!inside && m_hovered) {
+        m_hovered = false;
+        m_pressed = false;
+        trigger(UiMouseLeaveEvent {*this, input.mouse_position});
+    }
+
+    if (m_hovered) {
+        trigger(UiMouseHoverEvent {*this, input.mouse_position});
+
+        if (input.mouse_just_pressed) {
+            m_pressed = true;
+            trigger(UiMouseDownEvent {*this, input.mouse_position});
+        }
+
+        if (input.mouse_just_released && m_pressed) {
+            m_pressed = false;
+            trigger(UiClickEvent {*this, input.mouse_position});
+        }
+    }
+}
+
 void UiNode::add_child_internal(UiNode& child) {
     YGNodeInsertChild(
         m_yoga_node,
@@ -284,7 +319,7 @@ void UiNode::remove_child_internal(UiNode& child) {
     YGNodeRemoveChild(m_yoga_node, child.m_yoga_node);
 }
 
-bool is_point_inside(
+static bool is_point_inside(
     const Point& point,
     const Point& position,
     const Size& size

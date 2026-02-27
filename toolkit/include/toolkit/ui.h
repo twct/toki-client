@@ -2,13 +2,18 @@
 
 #include <yoga/YGNode.h>
 
+#include <flat_map>
+#include <functional>
 #include <memory>
+#include <typeindex>
 #include <utility>
 #include <vector>
 
 #include "color.h"
+#include "ui/events.h"
 #include "ui/geometry.h"
 #include "ui/painter.h"
+#include "util/function_traits.h"
 
 namespace toolkit {
 
@@ -251,8 +256,6 @@ enum PositionType { AutoLayout, Relative, Absolute };
 
 enum FlexDirection { Row, Column, ColumnReverse };
 
-enum class UiEventType { Click, MouseDown, MouseEnter, MouseHover, MouseLeave };
-
 struct UiInputState {
     Point mouse_position {0.0f, 0.0f};
     bool mouse_pressed = false;
@@ -348,6 +351,39 @@ class UiNode {
     UiNode& set_position(const UiPosition& position);
     UiNode& set_gap(float gap);
 
+    template<typename Func>
+    void add_event_listener(Func&& listener) {
+        using EventType = detail::first_arg_t<Func>;
+
+        auto key = std::type_index(typeid(EventType));
+        m_event_listeners[key].push_back(
+            [f = std::forward<Func>(listener)](const void* e) {
+                f(*static_cast<const EventType*>(e));
+            }
+        );
+    }
+
+    template<typename Func>
+    void on(Func&& listener) {
+        add_event_listener(std::forward<Func>(listener));
+    }
+
+    template<typename EventType>
+    void trigger(const EventType& event) {
+        auto key = std::type_index(typeid(EventType));
+        auto it = m_event_listeners.find(key);
+        if (it != m_event_listeners.end()) {
+            for (auto& cb : it->second) {
+                cb(&event);
+            }
+        }
+    }
+
+    template<typename EventType>
+    void emit(const EventType& event) {
+        trigger(event);
+    }
+
   protected:
     UiNode* m_parent {nullptr};
     bool m_visible {true};
@@ -355,9 +391,7 @@ class UiNode {
     Size computed_size() const;
     Point computed_position() const;
 
-    virtual void
-    update(const UiInputState& input, const Point& position, const Size& size) {
-    }
+    virtual void update(const UiInputState& input);
 
     virtual void paint(Painter& painter) {
         painter.draw_rect(
@@ -386,6 +420,13 @@ class UiNode {
     void calculate_layout(float width, float height);
     void add_child_internal(UiNode& child);
     void remove_child_internal(UiNode& child);
+
+    bool m_hovered {false};
+    bool m_pressed {false};
+
+    std::
+        flat_map<std::type_index, std::vector<std::function<void(const void*)>>>
+            m_event_listeners;
 
     std::vector<
         std::pair<UiNode*, std::vector<std::unique_ptr<UiNode>>::iterator>>

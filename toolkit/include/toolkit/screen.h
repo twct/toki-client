@@ -31,6 +31,8 @@ class Screen {
 
     Renderer* m_renderer {nullptr};
 
+    void update(const UiInputState& input);
+    void update_node(UiNode& node, const UiInputState& input);
     void render();
     void paint_node(UiNode& node);
 };
