@@ -3,6 +3,7 @@
 #include <core/error.h>
 #include <core/result.h>
 
+#include "render/renderer.h"
 #include "window.h"
 
 namespace toolkit {
@@ -13,6 +14,7 @@ class App {
 
   private:
     Window m_window;
+    Renderer m_renderer;
     bool m_running {true};
 };
 

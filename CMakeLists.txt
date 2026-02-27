@@ -28,6 +28,8 @@ CPMAddPackage(
         "SDL_STATIC ON"
 )
 
+CPMAddPackage("gh:gabime/spdlog@1.17.0")
+
 add_subdirectory(core)
 add_subdirectory(toolkit)
 

@@ -4,11 +4,14 @@ project(toolkit)
 add_library(${PROJECT_NAME} STATIC
     src/app.cpp
     src/window.cpp
+    src/render/renderer.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     core
+    spdlog
+    PkgConfig::SKIA
     SDL3::SDL3
 )
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)

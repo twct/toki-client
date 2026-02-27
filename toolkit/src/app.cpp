@@ -7,6 +7,7 @@ namespace toolkit {
 
 Result<int, Error> App::run(int argc, char** argv) {
     TRY_EXEC(m_window.open("Toki", 1600, 900));
+    TRY_EXEC(m_renderer.init(m_window));
 
     SDL_Event event;
 
@@ -16,10 +17,15 @@ Result<int, Error> App::run(int argc, char** argv) {
                 case SDL_EVENT_QUIT:
                     m_running = false;
                     break;
+                case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+                    m_renderer.resize(event.window.data1, event.window.data2);
+                    break;
                 default:
                     break;
             }
         }
+
+        m_renderer.render();
     }
 
     SDL_Quit();
