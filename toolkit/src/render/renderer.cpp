@@ -101,37 +101,99 @@ struct DrawCommandVisitor {
     SkCanvas* canvas;
 
     void operator()(const DrawRectCommand& cmd) const {
-        SkPaint paint;
-        paint.setColor(SkColorSetARGB(
+        auto rect = SkRect::MakeXYWH(
+            cmd.origin.x, cmd.origin.y, cmd.size.width, cmd.size.height
+        );
+
+        SkPaint fill_paint;
+        fill_paint.setColor(SkColorSetARGB(
             static_cast<uint8_t>(cmd.color.a * 255),
             static_cast<uint8_t>(cmd.color.r * 255),
             static_cast<uint8_t>(cmd.color.g * 255),
             static_cast<uint8_t>(cmd.color.b * 255)
         ));
-        paint.setAntiAlias(cmd.anti_aliasing);
+        fill_paint.setAntiAlias(cmd.anti_aliasing);
 
         if (cmd.corner_radius > 0.f) {
             SkRRect rrect;
-            rrect.setRectXY(
-                SkRect::MakeXYWH(
-                    cmd.origin.x,
-                    cmd.origin.y,
-                    cmd.size.width,
-                    cmd.size.height
-                ),
-                cmd.corner_radius,
-                cmd.corner_radius
-            );
-            canvas->drawRRect(rrect, paint);
+            rrect.setRectXY(rect, cmd.corner_radius, cmd.corner_radius);
+            canvas->drawRRect(rrect, fill_paint);
+
+            if (cmd.border.has_border() && cmd.border.is_uniform()) {
+                SkPaint stroke_paint;
+                stroke_paint.setColor(SkColorSetARGB(
+                    static_cast<uint8_t>(cmd.border_color.a * 255),
+                    static_cast<uint8_t>(cmd.border_color.r * 255),
+                    static_cast<uint8_t>(cmd.border_color.g * 255),
+                    static_cast<uint8_t>(cmd.border_color.b * 255)
+                ));
+                stroke_paint.setAntiAlias(cmd.anti_aliasing);
+                stroke_paint.setStyle(SkPaint::kStroke_Style);
+                stroke_paint.setStrokeWidth(cmd.border.left);
+                canvas->drawRRect(rrect, stroke_paint);
+            }
         } else {
+            canvas->drawRect(rect, fill_paint);
+
+            if (cmd.border.has_border()) {
+                draw_borders(cmd, rect);
+            }
+        }
+    }
+
+    void draw_borders(const DrawRectCommand& cmd, const SkRect& rect) const {
+        SkPaint border_paint;
+        border_paint.setColor(SkColorSetARGB(
+            static_cast<uint8_t>(cmd.border_color.a * 255),
+            static_cast<uint8_t>(cmd.border_color.r * 255),
+            static_cast<uint8_t>(cmd.border_color.g * 255),
+            static_cast<uint8_t>(cmd.border_color.b * 255)
+        ));
+        border_paint.setAntiAlias(cmd.anti_aliasing);
+
+        if (cmd.border.is_uniform()) {
+            border_paint.setStyle(SkPaint::kStroke_Style);
+            border_paint.setStrokeWidth(cmd.border.left);
+            canvas->drawRect(rect, border_paint);
+            return;
+        }
+
+        // Draw each side as a filled rect
+        float x = rect.fLeft;
+        float y = rect.fTop;
+        float w = rect.width();
+        float h = rect.height();
+
+        if (cmd.border.top > 0.f) {
+            canvas->drawRect(
+                SkRect::MakeXYWH(x, y, w, cmd.border.top), border_paint
+            );
+        }
+        if (cmd.border.bottom > 0.f) {
             canvas->drawRect(
                 SkRect::MakeXYWH(
-                    cmd.origin.x,
-                    cmd.origin.y,
-                    cmd.size.width,
-                    cmd.size.height
+                    x, y + h - cmd.border.bottom, w, cmd.border.bottom
                 ),
-                paint
+                border_paint
+            );
+        }
+        if (cmd.border.left > 0.f) {
+            canvas->drawRect(
+                SkRect::MakeXYWH(
+                    x, y + cmd.border.top, cmd.border.left,
+                    h - cmd.border.top - cmd.border.bottom
+                ),
+                border_paint
+            );
+        }
+        if (cmd.border.right > 0.f) {
+            canvas->drawRect(
+                SkRect::MakeXYWH(
+                    x + w - cmd.border.right, y + cmd.border.top,
+                    cmd.border.right,
+                    h - cmd.border.top - cmd.border.bottom
+                ),
+                border_paint
             );
         }
     }

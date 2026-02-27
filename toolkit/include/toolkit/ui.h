@@ -108,6 +108,13 @@ class UiPadding: public UiBoxValue<UiPadding> {
     friend class UiNode;
 };
 
+class UiBorder: public UiBoxValue<UiBorder> {
+  public:
+    using UiBoxValue<UiBorder>::UiBoxValue;
+    friend class UiNode;
+    friend class Screen;
+};
+
 class UiPosition {
   public:
     static UiPosition left(float left_px) {
@@ -303,6 +310,14 @@ class UiNode {
         return *this;
     }
 
+    UiNode& set_border_color(const Color& border_color) {
+        m_border_color = border_color;
+        return *this;
+    }
+
+    UiNode& set_border_width(float border_width);
+    UiNode& set_border(const UiBorder& border);
+
     UiNode& set_visible(bool visible) {
         m_visible = visible;
         return *this;
@@ -350,7 +365,14 @@ class UiNode {
             computed_size(),
             m_background_color,
             m_corner_radius,
-            AntiAliasing::Enabled
+            AntiAliasing::Enabled,
+            m_border_color,
+            BorderWidths {
+                .left = m_border.m_left,
+                .top = m_border.m_top,
+                .right = m_border.m_right,
+                .bottom = m_border.m_bottom
+            }
         );
     }
 
@@ -371,6 +393,8 @@ class UiNode {
 
     Color m_background_color {0.f, 0.f, 0.f, 0.f};
     float m_corner_radius {0.f};
+    Color m_border_color {0.f, 0.f, 0.f, 0.f};
+    UiBorder m_border {0.f, 0.f, 0.f, 0.f};
 
     std::vector<std::unique_ptr<UiNode>> m_nodes;
 };

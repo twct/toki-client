@@ -17,7 +17,10 @@ class MainScreen: public Screen {
 
         parent.add_node<UiNode>()
             .set_padding(UiPadding::all(15.f))
-            .set_background_color(Color::WHITE);
+            .set_margin(UiMargin::all(15.f))
+            .set_background_color(Color::WHITE)
+            .set_border(UiBorder::vertical(12.f))
+            .set_border_color(Color::BLACK);
     }
 };
 

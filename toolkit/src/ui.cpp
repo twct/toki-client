@@ -237,6 +237,21 @@ UiNode& UiNode::set_position(const UiPosition& position) {
     return *this;
 }
 
+UiNode& UiNode::set_border_width(float border_width) {
+    m_border = UiBorder::all(border_width);
+    YGNodeStyleSetBorder(m_yoga_node, YGEdgeAll, border_width);
+    return *this;
+}
+
+UiNode& UiNode::set_border(const UiBorder& border) {
+    m_border = border;
+    YGNodeStyleSetBorder(m_yoga_node, YGEdgeLeft, border.m_left);
+    YGNodeStyleSetBorder(m_yoga_node, YGEdgeTop, border.m_top);
+    YGNodeStyleSetBorder(m_yoga_node, YGEdgeRight, border.m_right);
+    YGNodeStyleSetBorder(m_yoga_node, YGEdgeBottom, border.m_bottom);
+    return *this;
+}
+
 UiNode& UiNode::set_gap(float gap) {
     YGNodeStyleSetGap(m_yoga_node, YGGutterAll, gap);
     return *this;
