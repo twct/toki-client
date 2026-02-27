@@ -39,7 +39,6 @@ Result<int, Error> App::run(int argc, char** argv) {
     };
 
     while (m_running) {
-        // Sleep when idle; wake up only when an event arrives.
         if (!needs_redraw) {
             if (!SDL_WaitEvent(&event)) {
                 continue;
@@ -52,6 +51,9 @@ Result<int, Error> App::run(int argc, char** argv) {
         }
 
         if (m_running && needs_redraw) {
+            if (!m_screens.empty()) {
+                m_screens.top()->render();
+            }
             m_renderer.render();
             needs_redraw = false;
         }

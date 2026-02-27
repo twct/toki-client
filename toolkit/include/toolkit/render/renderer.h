@@ -4,6 +4,8 @@
 #include <core/error.h>
 #include <core/result.h>
 #include <gpu/ganesh/GrDirectContext.h>
+#include <toolkit/ui/geometry.h>
+#include <toolkit/ui/painter.h>
 #include <toolkit/window.h>
 #include <vulkan/vulkan.h>
 
@@ -16,6 +18,15 @@ class Renderer {
     core::Result<core::Unit, core::Error> init(const Window& window);
 
     void resize(int width, int height);
+
+    void submit(const Painter& painter) {
+        m_painters.emplace_back(painter);
+    }
+
+    Size viewport_size() const {
+        return {static_cast<float>(m_ctx.width), static_cast<float>(m_ctx.height)};
+    }
+
     void render();
 
     struct VulkanContext {
@@ -44,6 +55,8 @@ class Renderer {
     VulkanContext m_ctx;
     SkColorType m_sk_color_type;
     sk_sp<GrDirectContext> m_gr_context;
+
+    std::vector<std::reference_wrapper<const Painter>> m_painters;
 };
 
 }  // namespace toolkit

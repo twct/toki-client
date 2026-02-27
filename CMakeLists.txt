@@ -29,6 +29,7 @@ CPMAddPackage(
 )
 
 CPMAddPackage("gh:gabime/spdlog@1.17.0")
+CPMAddPackage("gh:facebook/yoga@3.2.1")
 
 add_subdirectory(core)
 add_subdirectory(toolkit)

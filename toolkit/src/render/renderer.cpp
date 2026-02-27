@@ -77,9 +77,8 @@ Result<Unit, Error> Renderer::init(const Window& window) {
 
     log::info("Swapchain format: {}", static_cast<int>(m_ctx.swapchain_format));
 
-    m_sk_color_type =
-        (m_ctx.swapchain_format == VK_FORMAT_B8G8R8A8_UNORM
-         || m_ctx.swapchain_format == VK_FORMAT_B8G8R8A8_SRGB)
+    m_sk_color_type = (m_ctx.swapchain_format == VK_FORMAT_B8G8R8A8_UNORM
+                       || m_ctx.swapchain_format == VK_FORMAT_B8G8R8A8_SRGB)
         ? kBGRA_8888_SkColorType
         : kRGBA_8888_SkColorType;
 
@@ -97,6 +96,46 @@ void Renderer::resize(int w, int h) {
         log::error("Failed to recreate swapchain during resize");
     }
 }
+
+struct DrawCommandVisitor {
+    SkCanvas* canvas;
+
+    void operator()(const DrawRectCommand& cmd) const {
+        SkPaint paint;
+        paint.setColor(SkColorSetARGB(
+            static_cast<uint8_t>(cmd.color.a * 255),
+            static_cast<uint8_t>(cmd.color.r * 255),
+            static_cast<uint8_t>(cmd.color.g * 255),
+            static_cast<uint8_t>(cmd.color.b * 255)
+        ));
+        paint.setAntiAlias(cmd.anti_aliasing);
+
+        if (cmd.corner_radius > 0.f) {
+            SkRRect rrect;
+            rrect.setRectXY(
+                SkRect::MakeXYWH(
+                    cmd.origin.x,
+                    cmd.origin.y,
+                    cmd.size.width,
+                    cmd.size.height
+                ),
+                cmd.corner_radius,
+                cmd.corner_radius
+            );
+            canvas->drawRRect(rrect, paint);
+        } else {
+            canvas->drawRect(
+                SkRect::MakeXYWH(
+                    cmd.origin.x,
+                    cmd.origin.y,
+                    cmd.size.width,
+                    cmd.size.height
+                ),
+                paint
+            );
+        }
+    }
+};
 
 void Renderer::render() {
     uint32_t image_index;
@@ -161,22 +200,12 @@ void Renderer::render() {
     // -- Draw --
     canvas->clear(SK_ColorDKGRAY);
 
-    SkPaint rect_paint;
-    rect_paint.setColor(SkColorSetRGB(0x42, 0xA5, 0xF5));
-    rect_paint.setAntiAlias(true);
-    SkRRect rrect;
-    rrect.setRectXY(SkRect::MakeXYWH(100, 100, 300, 200), 20, 20);
-    canvas->drawRRect(rrect, rect_paint);
-
-    SkPaint circle_paint;
-    circle_paint.setColor(SkColorSetRGB(0xEF, 0x53, 0x50));
-    circle_paint.setAntiAlias(true);
-    canvas->drawCircle(550, 300, 80, circle_paint);
-
-    // SkPaint text_paint;
-    // text_paint.setColor(SK_ColorWHITE);
-    // text_paint.setAntiAlias(true);
-    // canvas->drawString("Hello, Skia!", 250, 450, font, text_paint);
+    DrawCommandVisitor visitor {canvas};
+    for (const auto& painter_ref : m_painters) {
+        for (const auto& cmd : painter_ref.get().commands()) {
+            std::visit(visitor, cmd);
+        }
+    }
 
     // Flush Skia — signal render_finished semaphore and transition to PRESENT_SRC
     GrBackendSemaphore signal_sem =
@@ -212,6 +241,8 @@ void Renderer::render() {
             static_cast<int>(present_result)
         );
     }
+
+    m_painters.clear();
 }
 
 /**
