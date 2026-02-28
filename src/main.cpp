@@ -23,7 +23,7 @@ class MainScreen: public Screen {
                            .set_border_color(Color::BLACK);
 
         header.on([](const UiMouseEnterEvent& event) {
-            event.target.set_background_color(Color::PINK);
+            event.target.set_background_color(Color::HOT_PINK);
         });
 
         header.on([](const UiMouseLeaveEvent& event) {
