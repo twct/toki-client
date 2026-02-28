@@ -31,6 +31,19 @@ class MainScreen: public Screen {
         });
 
         header.on([](const UiClickEvent& event) { log::info("Clicked Me!"); });
+
+        parent.add_node<UiNode>()
+            .set_width(200.f)
+            .set_height(100.f)
+            .set_margin(UiMargin::all(30.f))
+            .set_background_color(Color::WHITE)
+            .set_corner_radius(8.f)
+            .set_box_shadow(
+                BoxShadow()
+                    .with_offset(4.f, 4.f)
+                    .with_blur(12.f)
+                    .with_color({0.f, 0.f, 0.f, 0.5f})
+            );
     }
 };
 

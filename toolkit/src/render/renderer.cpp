@@ -4,6 +4,8 @@
 #include <core/SkColorSpace.h>
 #include <core/SkFont.h>
 #include <core/SkFontMgr.h>
+#include <core/SkBlurTypes.h>
+#include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
 #include <core/SkSurface.h>
 #include <core/SkTypeface.h>
@@ -105,6 +107,11 @@ struct DrawCommandVisitor {
             cmd.origin.x, cmd.origin.y, cmd.size.width, cmd.size.height
         );
 
+        // Draw box shadow before the main rect
+        if (cmd.shadow.has_shadow()) {
+            draw_box_shadow(cmd, rect);
+        }
+
         SkPaint fill_paint;
         fill_paint.setColor(SkColorSetARGB(
             static_cast<uint8_t>(cmd.color.a * 255),
@@ -195,6 +202,41 @@ struct DrawCommandVisitor {
                 ),
                 border_paint
             );
+        }
+    }
+
+    void draw_box_shadow(const DrawRectCommand& cmd, const SkRect& rect) const {
+        const auto& shadow = cmd.shadow;
+
+        SkPaint shadow_paint;
+        shadow_paint.setColor(SkColorSetARGB(
+            static_cast<uint8_t>(shadow.color().a * 255),
+            static_cast<uint8_t>(shadow.color().r * 255),
+            static_cast<uint8_t>(shadow.color().g * 255),
+            static_cast<uint8_t>(shadow.color().b * 255)
+        ));
+        shadow_paint.setAntiAlias(cmd.anti_aliasing);
+
+        if (shadow.blur_radius() > 0.f) {
+            // Skia sigma is roughly blur_radius / 2
+            float sigma = shadow.blur_radius() / 2.f;
+            shadow_paint.setMaskFilter(
+                SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, sigma)
+            );
+        }
+
+        SkRect shadow_rect = rect;
+        shadow_rect.offset(shadow.offset_x(), shadow.offset_y());
+        shadow_rect.outset(shadow.spread_radius(), shadow.spread_radius());
+
+        if (cmd.corner_radius > 0.f) {
+            SkRRect shadow_rrect;
+            shadow_rrect.setRectXY(
+                shadow_rect, cmd.corner_radius, cmd.corner_radius
+            );
+            canvas->drawRRect(shadow_rrect, shadow_paint);
+        } else {
+            canvas->drawRect(shadow_rect, shadow_paint);
         }
     }
 };

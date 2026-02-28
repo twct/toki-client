@@ -3,7 +3,6 @@
 #include <toolkit/color.h>
 #include <toolkit/render/commands.h>
 
-#include <variant>
 #include <vector>
 
 #include "geometry.h"
@@ -31,7 +30,8 @@ class Painter {
         float corner_radius = 0.f,
         AntiAliasing anti_aliasing = AntiAliasing::Enabled,
         const Color& border_color = {0.f, 0.f, 0.f, 0.f},
-        const BorderWidths& border = {}
+        const BorderWidths& border = {},
+        const BoxShadow& shadow = {}
     ) {
         m_commands.push_back(
             DrawRectCommand {
@@ -41,7 +41,8 @@ class Painter {
                 .corner_radius = corner_radius,
                 .anti_aliasing = to_bool(anti_aliasing),
                 .border_color = border_color,
-                .border = border
+                .border = border,
+                .shadow = shadow
             }
         );
     }

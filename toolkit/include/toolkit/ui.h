@@ -321,6 +321,11 @@ class UiNode {
     UiNode& set_border_width(float border_width);
     UiNode& set_border(const UiBorder& border);
 
+    UiNode& set_box_shadow(const BoxShadow& shadow) {
+        m_box_shadow = shadow;
+        return *this;
+    }
+
     UiNode& set_visible(bool visible) {
         m_visible = visible;
         return *this;
@@ -406,7 +411,8 @@ class UiNode {
                 .top = m_border.m_top,
                 .right = m_border.m_right,
                 .bottom = m_border.m_bottom
-            }
+            },
+            m_box_shadow
         );
     }
 
@@ -436,6 +442,7 @@ class UiNode {
     float m_corner_radius {0.f};
     Color m_border_color {0.f, 0.f, 0.f, 0.f};
     UiBorder m_border {0.f, 0.f, 0.f, 0.f};
+    BoxShadow m_box_shadow;
 
     std::vector<std::unique_ptr<UiNode>> m_nodes;
 };
