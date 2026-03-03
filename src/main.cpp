@@ -7,6 +7,26 @@
 
 using namespace toolkit;
 
+class ImageCard: public UiNode {
+  public:
+    ImageCard(const Handle<Image>& image) {
+        auto& box = set_width(200.f)
+                        .set_height(100.f)
+                        .set_background_color(Color::WHITE)
+                        .set_corner_radius(8.f)
+                        .set_box_shadow(
+                            BoxShadow()
+                                .with_offset(4.f, 4.f)
+                                .with_blur(12.f)
+                                .with_color({0.f, 0.f, 0.f, 0.5f})
+                        );
+
+        box.add_node<UiImage>(image)
+            .set_fit(ImageFit::Cover)
+            .set_flex_grow(1.f);
+    }
+};
+
 class MainScreen: public Screen {
   public:
     void on_enter() override {
@@ -33,22 +53,15 @@ class MainScreen: public Screen {
 
         header.on([](const UiClickEvent& event) { log::info("Clicked Me!"); });
 
-        auto& box = parent.add_node<UiNode>()
-                        .set_width(200.f)
-                        .set_height(100.f)
-                        .set_margin(UiMargin::all(30.f))
-                        .set_background_color(Color::WHITE)
-                        .set_corner_radius(8.f)
-                        .set_box_shadow(
-                            BoxShadow()
-                                .with_offset(4.f, 4.f)
-                                .with_blur(12.f)
-                                .with_color({0.f, 0.f, 0.f, 0.5f})
-                        );
+        auto& cards = parent.add_node<UiNode>()
+                          .set_flex_grow(1.f)
+                          .set_gap(20.f)
+                          .set_margin(UiMargin::all(25.f))
+                          .set_flex_direction(FlexDirection::Row);
 
-        auto& img = box.add_node<UiImage>(load<Image>("sakura.png"))
-                        .set_fit(ImageFit::Cover)
-                        .set_flex_grow(1.f);
+        for (int i = 0; i < 12; ++i) {
+            cards.add_node<ImageCard>(load<Image>("sakura.png"));
+        }
     }
 };
 
