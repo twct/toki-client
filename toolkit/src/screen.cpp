@@ -18,14 +18,27 @@ void Screen::update_node(UiNode& node, const UiInputState& input) {
     }
 }
 
-void Screen::paint_node(UiNode& node) {
+void Screen::paint_node(UiNode& node, Point parent_abs) {
     if (!node.is_visible()) return;
 
+    m_painter.set_translation(parent_abs);
     node.paint(m_painter);
 
+    Point this_abs = {
+        parent_abs.x + node.computed_position().x,
+        parent_abs.y + node.computed_position().y,
+    };
+
+    bool clip = node.m_corner_radius > 0.f && !node.m_nodes.empty();
+    if (clip)
+        m_painter.push_clip(node.computed_position(), node.computed_size(), node.m_corner_radius);
+
     for (auto& child : node.m_nodes) {
-        paint_node(*child);
+        paint_node(*child, this_abs);
     }
+
+    if (clip)
+        m_painter.pop_clip();
 }
 
 void Screen::render() {

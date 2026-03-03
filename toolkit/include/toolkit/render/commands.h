@@ -3,6 +3,7 @@
 #include <toolkit/color.h>
 #include <toolkit/ui/geometry.h>
 
+#include <cstdint>
 #include <variant>
 
 namespace toolkit {
@@ -107,6 +108,28 @@ struct DrawRectCommand {
     BoxShadow shadow;
 };
 
-using DrawCommand = std::variant<DrawRectCommand>;
+enum class ImageFit {
+    Fill,    // stretch to fill, ignoring aspect ratio
+    Contain, // scale to fit within bounds, letterboxed
+    Cover,   // scale to fill bounds, cropping overflow
+    None,    // original size, centered, cropped if larger than bounds
+};
+
+struct DrawImageCommand {
+    size_t image_id;
+    Point origin;
+    Size size;
+    ImageFit fit = ImageFit::Fill;
+};
+
+struct ClipRRectCommand {
+    Point origin;
+    Size size;
+    float corner_radius;
+};
+
+struct ClipRestoreCommand {};
+
+using DrawCommand = std::variant<DrawRectCommand, DrawImageCommand, ClipRRectCommand, ClipRestoreCommand>;
 
 }  // namespace toolkit

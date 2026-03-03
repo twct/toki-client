@@ -1,15 +1,24 @@
 cmake_minimum_required(VERSION 3.16)
 project(toolkit)
 
+CPMAddPackage("gh:nothings/stb#f1c79c02822848a9bed4315b12c8c8f3761e1296")
+
 add_library(${PROJECT_NAME} STATIC
     src/app.cpp
+    src/assetserver.cpp
     src/window.cpp
     src/ui.cpp
     src/render/renderer.cpp
     src/screen.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC include)
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        include
+    PRIVATE
+        ${stb_SOURCE_DIR}
+)
+
 target_link_libraries(${PROJECT_NAME} PUBLIC
     core
     spdlog

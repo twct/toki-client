@@ -22,6 +22,7 @@
 #include <ports/SkFontMgr_directory.h>
 #include <toolkit/log.h>
 #include <toolkit/render/renderer.h>
+#include <toolkit/render/skia_bridge.h>
 
 using namespace core;
 
@@ -101,6 +102,78 @@ void Renderer::resize(int w, int h) {
 
 struct DrawCommandVisitor {
     SkCanvas* canvas;
+    const std::flat_map<size_t, sk_sp<SkImage>>* image_cache;
+
+    void operator()(const DrawImageCommand& cmd) const {
+        auto it = image_cache->find(cmd.image_id);
+        if (it == image_cache->end()) return;
+        const auto& image = it->second;
+        if (!image) return;
+
+        float iw = static_cast<float>(image->width());
+        float ih = static_cast<float>(image->height());
+        float dw = cmd.size.width;
+        float dh = cmd.size.height;
+
+        SkRect src = SkRect::MakeWH(iw, ih);
+        SkRect dst = SkRect::MakeXYWH(cmd.origin.x, cmd.origin.y, dw, dh);
+
+        switch (cmd.fit) {
+            case ImageFit::Fill:
+                break;
+            case ImageFit::Contain: {
+                float scale = std::min(dw / iw, dh / ih);
+                float sw = iw * scale, sh = ih * scale;
+                dst = SkRect::MakeXYWH(
+                    cmd.origin.x + (dw - sw) * 0.5f,
+                    cmd.origin.y + (dh - sh) * 0.5f,
+                    sw, sh
+                );
+                break;
+            }
+            case ImageFit::Cover: {
+                float scale = std::max(dw / iw, dh / ih);
+                float cw = dw / scale, ch = dh / scale;
+                src = SkRect::MakeXYWH((iw - cw) * 0.5f, (ih - ch) * 0.5f, cw, ch);
+                break;
+            }
+            case ImageFit::None: {
+                float ox = (dw - iw) * 0.5f;
+                float oy = (dh - ih) * 0.5f;
+                src = SkRect::MakeXYWH(
+                    ox < 0.f ? -ox : 0.f, oy < 0.f ? -oy : 0.f,
+                    std::min(iw, dw), std::min(ih, dh)
+                );
+                dst = SkRect::MakeXYWH(
+                    cmd.origin.x + (ox > 0.f ? ox : 0.f),
+                    cmd.origin.y + (oy > 0.f ? oy : 0.f),
+                    std::min(iw, dw), std::min(ih, dh)
+                );
+                break;
+            }
+        }
+
+        SkPaint paint;
+        paint.setAntiAlias(true);
+        canvas->drawImageRect(
+            image.get(), src, dst,
+            SkSamplingOptions(SkFilterMode::kLinear),
+            &paint,
+            SkCanvas::kStrict_SrcRectConstraint
+        );
+    }
+
+    void operator()(const ClipRRectCommand& cmd) const {
+        SkRect rect = SkRect::MakeXYWH(cmd.origin.x, cmd.origin.y, cmd.size.width, cmd.size.height);
+        SkRRect rrect;
+        rrect.setRectXY(rect, cmd.corner_radius, cmd.corner_radius);
+        canvas->save();
+        canvas->clipRRect(rrect, true);
+    }
+
+    void operator()(const ClipRestoreCommand&) const {
+        canvas->restore();
+    }
 
     void operator()(const DrawRectCommand& cmd) const {
         auto rect = SkRect::MakeXYWH(
@@ -241,7 +314,20 @@ struct DrawCommandVisitor {
     }
 };
 
+void Renderer::create_image(size_t id, const Image& img) {
+    auto sk_img = to_sk_image(img);
+    std::lock_guard lock(m_pending_mutex);
+    m_pending_images.emplace_back(id, std::move(sk_img));
+}
+
 void Renderer::render() {
+    {
+        std::lock_guard lock(m_pending_mutex);
+        for (auto& [id, img] : m_pending_images)
+            m_image_cache.emplace(id, std::move(img));
+        m_pending_images.clear();
+    }
+
     uint32_t image_index;
     VkResult acquire_result = vkAcquireNextImageKHR(
         m_ctx.device,
@@ -304,7 +390,7 @@ void Renderer::render() {
     // -- Draw --
     canvas->clear(SK_ColorDKGRAY);
 
-    DrawCommandVisitor visitor {canvas};
+    DrawCommandVisitor visitor {canvas, &m_image_cache};
     for (const auto& painter_ref : m_painters) {
         for (const auto& cmd : painter_ref.get().commands()) {
             std::visit(visitor, cmd);

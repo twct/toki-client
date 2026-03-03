@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/SkColor.h>
+#include <core/SkImage.h>
 #include <core/error.h>
 #include <core/result.h>
 #include <gpu/ganesh/GrDirectContext.h>
@@ -9,9 +10,13 @@
 #include <toolkit/window.h>
 #include <vulkan/vulkan.h>
 
+#include <flat_map>
+#include <mutex>
 #include <vector>
 
 namespace toolkit {
+
+struct Image;
 
 class Renderer {
   public:
@@ -26,6 +31,8 @@ class Renderer {
     Size viewport_size() const {
         return {static_cast<float>(m_ctx.width), static_cast<float>(m_ctx.height)};
     }
+
+    void create_image(size_t id, const Image& img);
 
     void render();
 
@@ -56,6 +63,9 @@ class Renderer {
     SkColorType m_sk_color_type;
     sk_sp<GrDirectContext> m_gr_context;
 
+    std::flat_map<size_t, sk_sp<SkImage>> m_image_cache;
+    std::mutex m_pending_mutex;
+    std::vector<std::pair<size_t, sk_sp<SkImage>>> m_pending_images;
     std::vector<std::reference_wrapper<const Painter>> m_painters;
 };
 

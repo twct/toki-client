@@ -23,6 +23,8 @@ inline bool to_bool(AntiAliasing anti_aliasing) {
 
 class Painter {
   public:
+    void set_translation(const Point& t) { m_translation = t; }
+
     void draw_rect(
         const Point& origin,
         const Size& size,
@@ -35,7 +37,7 @@ class Painter {
     ) {
         m_commands.push_back(
             DrawRectCommand {
-                .origin = origin,
+                .origin = {origin.x + m_translation.x, origin.y + m_translation.y},
                 .size = size,
                 .color = color,
                 .corner_radius = corner_radius,
@@ -45,6 +47,32 @@ class Painter {
                 .shadow = shadow
             }
         );
+    }
+
+    void push_clip(const Point& origin, const Size& size, float corner_radius) {
+        m_commands.push_back(ClipRRectCommand {
+            .origin = {origin.x + m_translation.x, origin.y + m_translation.y},
+            .size = size,
+            .corner_radius = corner_radius,
+        });
+    }
+
+    void pop_clip() {
+        m_commands.push_back(ClipRestoreCommand {});
+    }
+
+    void draw_image(
+        const Point& origin,
+        const Size& size,
+        size_t image_id,
+        ImageFit fit = ImageFit::Fill
+    ) {
+        m_commands.push_back(DrawImageCommand {
+            .image_id = image_id,
+            .origin = {origin.x + m_translation.x, origin.y + m_translation.y},
+            .size = size,
+            .fit = fit,
+        });
     }
 
     const std::vector<DrawCommand>& commands() const {
@@ -57,6 +85,7 @@ class Painter {
 
   private:
     std::vector<DrawCommand> m_commands;
+    Point m_translation {0.f, 0.f};
 };
 
 }  // namespace toolkit
