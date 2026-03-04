@@ -278,10 +278,10 @@ static bool is_point_inside(
     const Size& size
 );
 
-void UiNode::update(const UiInputState& input) {
-    auto pos = computed_position();
+void UiNode::update(const UiInputState& input, Point parent_abs) {
+    Point abs = {parent_abs.x + computed_position().x, parent_abs.y + computed_position().y};
     auto size = computed_size();
-    bool inside = is_point_inside(input.mouse_position, pos, size);
+    bool inside = is_point_inside(input.mouse_position, abs, size);
 
     if (inside && !m_hovered) {
         m_hovered = true;

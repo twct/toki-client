@@ -8,13 +8,18 @@ void Screen::update(const UiInputState& input) {
     update_node(m_root_node, input);
 }
 
-void Screen::update_node(UiNode& node, const UiInputState& input) {
+void Screen::update_node(UiNode& node, const UiInputState& input, Point parent_abs) {
     if (!node.is_visible()) return;
 
-    node.update(input);
+    node.update(input, parent_abs);
+
+    Point this_abs = {
+        parent_abs.x + node.computed_position().x,
+        parent_abs.y + node.computed_position().y,
+    };
 
     for (auto& child : node.m_nodes) {
-        update_node(*child, input);
+        update_node(*child, input, this_abs);
     }
 }
 

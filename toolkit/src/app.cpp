@@ -8,6 +8,7 @@ namespace toolkit {
 Result<int, Error> App::run(int argc, char** argv) {
     TRY_EXEC(m_window.open("Toki", 1600, 900));
     TRY_EXEC(m_renderer.init(m_window));
+    m_screen_manager.flush();
 
     SDL_Event event;
     UiInputState input_state;
@@ -60,9 +61,12 @@ Result<int, Error> App::run(int argc, char** argv) {
         }
 
         if (m_running) {
-            if (!m_screens.empty()) {
-                m_screens.top()->update(input_state);
-                m_screens.top()->render();
+            if (!m_screen_manager.empty()) {
+                m_screen_manager.current()->update(input_state);
+                m_screen_manager.flush();
+            }
+            if (!m_screen_manager.empty()) {
+                m_screen_manager.current()->render();
             }
             m_renderer.render();
 

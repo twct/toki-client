@@ -396,7 +396,7 @@ class UiNode {
     Size computed_size() const;
     Point computed_position() const;
 
-    virtual void update(const UiInputState& input);
+    virtual void update(const UiInputState& input, Point parent_abs);
 
     virtual void paint(Painter& painter) {
         painter.draw_rect(
